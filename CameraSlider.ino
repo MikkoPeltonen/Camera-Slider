@@ -3,34 +3,74 @@
 #define RIGHTBTN A1
 #define LEFTBTN A0
 
-#define DIR_PIN 3
-#define PUL_PIN 2
-#define ENA_PIN 4
+// Slider motor
+#define SLIDER_DIR 3
+#define SLIDER_PUL 2
+#define SLIDER_ENA 4
 
-AccelStepper stepper(AccelStepper::DRIVER, PUL_PIN, DIR_PIN); 
+// Pitch motor
+#define PITCH_DIR 1
+#define PITCH_PUL 1
+#define PITCH_ENA 1
+
+// Yaw motor
+#define YAW_DIR 2
+#define YAW_PUL 2
+#define YAW_ENA 2
+
+// Focus motor
+#define FOCUS_DIR 3
+#define FOCUS_PUL 3
+#define FOCUS_ENA 3
+
+// Zoom motor
+#define ZOOM_DIR 4
+#define ZOOM_PUL 4
+#define ZOOM_ENA 4
+
+
+AccelStepper slider(AccelStepper::DRIVER, SLIDER_PUL, SLIDER_DIR); 
 
 void setup() {  
-  pinMode(DIR_PIN, OUTPUT);
-  pinMode(PUL_PIN, OUTPUT);
-  pinMode(ENA_PIN, OUTPUT);
-  digitalWrite(ENA_PIN, LOW);
-
   pinMode(RIGHTBTN, INPUT);
   pinMode(LEFTBTN, INPUT);
 
-  stepper.setMaxSpeed(800);
-  stepper.setAcceleration(1000);
+  // Specify enable pin for the motor
+  slider.setEnablePin(SLIDER_ENA);
+  slider.setPinsInverted(false, false, true);
+  slider.enableOutputs();
+  
+  slider.setMaxSpeed(715);
+  slider.setAcceleration(20000);  
+
+  Serial.begin(9600);
+}
+
+void serialEvent() {
+  while(Serial.available()) {
+    char c = (char) Serial.read();
+    int input = (int) c - 48;
+
+    if(input == 1) {
+      slider.move(-1000);
+    } else if(input == 2) {
+      slider.move(1000);
+    } else if(input == 3) {
+      slider.disableOutputs();
+    } else if(input == 4) {
+      slider.enableOutputs();
+    }
+  }
 }
 
 void loop() {
-    //stepper.run();
     if(digitalRead(RIGHTBTN) == HIGH && digitalRead(LEFTBTN) == HIGH) {
       // Do nothing
     } else if(digitalRead(RIGHTBTN) == HIGH) {
-      stepper.move(100);
+      slider.move(1000);
     } else if(digitalRead(LEFTBTN) == HIGH) {
-      stepper.move(-100);
-    }
+      slider.move(-1000);
+    }    
 
-    stepper.run();
+    slider.run();
 }
