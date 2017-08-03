@@ -4,6 +4,10 @@
 #define PUL 47
 #define DIR 49
 
+#define STEPS 200
+#define MICROSTEPPING 32
+#define RATIO 13.73
+
 enum Mode {
   Timelapse,
   Video,
@@ -21,6 +25,13 @@ int zoom = 5200;
 
 AccelStepper stepper(AccelStepper::DRIVER, PUL, DIR);
 
+/* 
+ * Convert a given angle to steps required for the motor to rotate the angle
+ */
+int angleToSteps(double angle) {
+  return (int) (angle / 360.0 * STEPS * MICROSTEPPING * RATIO);
+}
+
 void setup() {
   Serial2.begin(115200);
   Serial.begin(9600);
@@ -36,8 +47,9 @@ void setup() {
   stepper.enableOutputs();
 
   stepper.setCurrentPosition(0);
-  stepper.moveTo(43969);
-  stepper.setSpeed(500);
+  //stepper.moveTo(43969);
+  stepper.moveTo(angleToSteps(90.0));
+  stepper.setSpeed(100);
 }
 
 void loop() {
