@@ -1,31 +1,18 @@
 #include <AccelStepper.h>
-
-#define ENA 51
-#define PUL 47
-#define DIR 49
+#include <HardwareSerial.h>
+#include "commands.h"
+#include "pinouts.h"
+#include "enums.h"
 
 #define STEPS 200
 #define MICROSTEPPING 1
 #define RATIO 13.73
 
-typedef enum {
-  Timelapse,
-  Video,
-  Panorama
-} Mode;
+// Used to determine the Serial connection which is used to send data to the client.
+// Assigning the Serial port to a different pointer makes it easier to change it later.
+HardwareSerial *Client = &Serial2;
 
-typedef enum {
-  CW,
-  CCW,
-  STOP,
-  STEP
-} Direction;
-
-
-Direction dir = STOP;
-
-bool isRunning = false;
-bool isConnected = false;
+ConnectionStatus connectionStatus = ConnectionStatus.DISCONNECTED;
 
 int slide = 150;
 int pan = 7200;
@@ -33,7 +20,10 @@ int tilt = -5000;
 int focus = 0;
 int zoom = 5200;
 
-AccelStepper stepper(AccelStepper::DRIVER, PUL, DIR);
+// Initialize motors
+AccelStepper panMotor(AccelStepper::DRIVER, PAN_PUL, PAN_DIR);
+AccelStepper tiltMotor(AccelStepper::DRIVER, TILT_PUL, TILT_DIR);
+AccelStepper slideMotor(AccelStepper::DRIVER, SLIDE_PUL, SLIDE_DIR);
 
 /* 
  * Convert a given angle to steps required for the motor to rotate the angle
@@ -42,114 +32,111 @@ int angleToSteps(double angle) {
   return (int) (angle / 360.0 * STEPS * MICROSTEPPING * RATIO);
 }
 
-void setup() {
-  Serial2.begin(115200);
-  Serial.begin(9600);
-
-  pinMode(ENA, OUTPUT);
-  pinMode(PUL, OUTPUT);
-  pinMode(DIR, OUTPUT);
-
-  stepper.setEnablePin(ENA);
-  stepper.setPinsInverted(false, false, true);
-  stepper.setMaxSpeed(2000);
-  stepper.setAcceleration(100000);
-  stepper.enableOutputs();
-
-  stepper.setCurrentPosition(0);
-  //stepper.moveTo(43969);
-  //stepper.moveTo(angleToSteps(90.0));
-  stepper.setSpeed(800);
-
-  pinMode(13, OUTPUT);
-  Serial2.setTimeout(5);
+/**
+ * Send data to Serial
+ */
+void sendData(byte data[]) {
+  Client->write(data, sizeof(data));
 }
 
-int l = angleToSteps(3);
-int c = angleToSteps(3) * -1;
+/**
+ * Turns integers into byte arrays
+ */
+char intToByteArray(uint32_t n) {
+  unsigned char bytes[4];
+  bytes[0] = (n >> 24) & 0xFF;
+  bytes[1] = (n >> 16) & 0xFF;
+  bytes[2] = (n >> 8) & 0xFF;
+  bytes[3] = n & 0xFF;
 
-String getValue(String data, char separator, int index)
-{
-    int found = 0;
-    int strIndex[] = { 0, -1 };
-    int maxIndex = data.length() - 1;
+  return bytes;
+}
 
-    for (int i = 0; i <= maxIndex && found <= index; i++) {
-        if (data.charAt(i) == separator || i == maxIndex) {
-            found++;
-            strIndex[0] = strIndex[1] + 1;
-            strIndex[1] = (i == maxIndex) ? i+1 : i;
-        }
-    }
-    return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
+/**
+ * Sends a handshake greeting message to the client
+ */
+void sendHandshakeGreetingMessage() {
+  byte msg[18];
+  msg[0] = FLAG_START;
+  msg[1] = HANDSHAKE_GREETING;
+  memcpy(&msg, HANDSHAKE_GREETING, sizeof(HANDSHAKE_GREETING));
+  msg[18] = FLAG_STOP;
+
+  sendData(msg);
+}
+
+/**
+ *
+ */
+void sendStatus() {
+
+}
+
+/**
+ *
+ */
+void sendPosition() {
+  byte msg[27];
+  msg[0] = FLAG_START;
+  msg[1] = CMD_POSITION;
+
+
+
+}
+
+void setup() {
+  Client->begin(115200);
+  Serial.begin(9600);
+
+  panMotor.setEnablePin(PAN_ENA);
+  panMotor.setPinsInverted(false, false, true);
+  panMotor.setMaxSpeed(2000);
+  panMotor.setAcceleration(100000);
+  panMotor.enableOutputs();
+  panMotor.setCurrentPosition(0);
+  panMotor.setSpeed(800);
+
+  tiltMotor.setEnablePin(TILT_ENA);
+  tiltMotor.setPinsInverted(false, false, true);
+  tiltMotor.setMaxSpeed(2000);
+  tiltMotor.setAcceleration(100000);
+  tiltMotor.enableOutputs();
+  tiltMotor.setCurrentPosition(0);
+  tiltMotor.setSpeed(800);
+
+  slideMotor.setEnablePin(SLIDE_ENA);
+  slideMotor.setPinsInverted(false, false, true);
+  slideMotor.setMaxSpeed(2000);
+  slideMotor.setAcceleration(100000);
+  slideMotor.enableOutputs();
+  slideMotor.setCurrentPosition(0);
+  slideMotor.setSpeed(800);
+
+  Client->setTimeout(5);
 }
 
 void loop() {
-  if (Serial2.available()) {
-    String msg = Serial2.readStringUntil("\n");
-    msg.trim();
+  if (Client->available()) {
+    byte msg[30];
+    Client->readBytesUntil(FLAG_STOP, msg, 30);
+    byte cmd = msg[1];
+    
+    if (connectionStatus == ConnectionStatus.DISCONNECTED) {
+      sendHandshakeGreetingMessage();
+      connectionStatus = ConnectionStatus.CONNECTING;
+    } else if (connectionStatus == ConnectionStatus.CONNECTING) {
 
-    if (msg == String("Hello, Camera Slider!")) {
-      Serial2.println("Hello, Android!");
-    } else if (msg == String("STATUS?")) {
-      Serial2.println("STATUS:RUNNING;MODE:TIMELAPSE;ELAPSED:5230;REMAINING:6250");
-    } else if (msg == String("HOME?")) {
-      //Serial2.println("HOME:GET;SLIDE:" + slide + ";PAN:" + pan + ";TILT:" + tilt + ";FOCUS:" + focus + ";ZOOM:" + zoom);
-      Serial2.println("HOME:GET;SLIDE:1500;PAN:7200;TILT:-5000;FOCUS:0;ZOOM:5200");
-    } else if (msg.startsWith("MOTOR")) {
-      String m = getValue(msg, ';', 0);
-      String d = getValue(msg, ';', 1);
-      String m_a = getValue(m, ':', 0);
-      String m_b = getValue(m, ':', 1);
-      String d_a = getValue(d, ':', 0);
-      String d_b = getValue(d, ':', 1);
-
-      if (d_b == "STOP") {
-        Serial.println("STOP");
-        dir = STOP;
-      } else if (d_b == "CW") {
-        Serial.println("CW");
-        stepper.setSpeed(500);
-        dir = CW;
-      } else if (d_b == "CCW") {
-        Serial.println("CCW");
-        stepper.setSpeed(-500);
-        dir = CCW;
+      if (strcmp(HANDHSAKE_RESPONSE, msg) == 0) {
+        connectionStatus = ConnectionStatus.CONNECTED;
+      } else {
+        connectionStatus = ConnectionStatus.DISCONNECTED;
       }
-    } else if (msg.startsWith("STEP")) {
-      String m = getValue(msg, ';', 0);
-      String d = getValue(msg, ';', 1);
-      String m_a = getValue(m, ':', 0);
-      String m_b = getValue(m, ':', 1);
-      String d_a = getValue(d, ':', 0);
-      String d_b = getValue(d, ':', 1);
-
-       if (d_b == "CW") {
-        stepper.move(l);
-        dir = STEP;
-      } else if (d_b == "CCW") {
-        stepper.move(c);
-        dir = STEP;
-      }
-    }
-  } 
-
-  //if (Serial.available()) {
-  //  Serial2.write(Serial.read());
-  //}
-
-  //stepper.run();
-  if (dir == CW || dir == CCW) {
-    stepper.runSpeed();
-  } else if (dir == STEP) {
-    stepper.run();
-
-    if (stepper.distanceToGo() == 0) {
-      dir = STOP;
+    } else {
+      switch (cmd) {
+        case CMD_STATUS:
+          break;
+      } 
     }
   }
 }
 
-void goHome() {}
-
-void setHome() {}
