@@ -4,65 +4,51 @@
 #include "pinouts.h"
 #include "enums.h"
 
-#define STEPS 200
-#define MICROSTEPPING 1
-#define RATIO 13.73
-
 // Used to determine the Serial connection which is used to send data to the client.
 // Assigning the Serial port to a different pointer makes it easier to change it later.
 HardwareSerial *Client = &Serial2;
 
 ConnectionStatus connectionStatus = ConnectionStatus.DISCONNECTED;
 
-int slide = 150;
-int pan = 7200;
-int tilt = -5000;
-int focus = 0;
-int zoom = 5200;
-
 // Initialize motors
 AccelStepper panMotor(AccelStepper::DRIVER, PAN_PUL, PAN_DIR);
 AccelStepper tiltMotor(AccelStepper::DRIVER, TILT_PUL, TILT_DIR);
 AccelStepper slideMotor(AccelStepper::DRIVER, SLIDE_PUL, SLIDE_DIR);
 
-/* 
- * Convert a given angle to steps required for the motor to rotate the angle
+/**
+ * Send a message via Serial.
  */
-int angleToSteps(double angle) {
-  return (int) (angle / 360.0 * STEPS * MICROSTEPPING * RATIO);
+void sendMessage(uint32_t * command, unsigned char * payload, uint32_t payloadLength) {
+  uint32_t size = sizeof(char) * (payloadLength + 2);
+  unsigned char msg[size];
+
+  msg[0] = START;
+  msg[1] = command;
+  memcpy(msg + 2, payload, payloadLength);
+  memcpy(msg + payloadLength + 1, "\0", 1);
+
+  Client->write(msg, sizeof(msg));
 }
 
 /**
- * Send data to Serial
+ * Turns integers into byte arrays.
+ *
+ * Usage: Initialize a unsigned char array and call with a pointer to that array
+ * unsigned char bytes[4];
+ * intToByteArray(bytes, number);
  */
-void sendData(byte data[]) {
-  Client->write(data, sizeof(data));
-}
-
-/**
- * Turns integers into byte arrays
- */
-char intToByteArray(uint32_t n) {
-  unsigned char bytes[4];
-  bytes[0] = (n >> 24) & 0xFF;
-  bytes[1] = (n >> 16) & 0xFF;
-  bytes[2] = (n >> 8) & 0xFF;
-  bytes[3] = n & 0xFF;
-
-  return bytes;
+void intToByteArray(unsigned char * bytes, uint32_t n) {
+    bytes[0] = (n >> 24) & 0xFF;
+    bytes[1] = (n >> 16) & 0xFF;
+    bytes[2] = (n >> 8) & 0xFF;
+    bytes[3] = n & 0xFF;
 }
 
 /**
  * Sends a handshake greeting message to the client
  */
 void sendHandshakeGreetingMessage() {
-  byte msg[18];
-  msg[0] = FLAG_START;
-  msg[1] = HANDSHAKE_GREETING;
-  memcpy(&msg, HANDSHAKE_GREETING, sizeof(HANDSHAKE_GREETING));
-  msg[18] = FLAG_STOP;
-
-  sendData(msg);
+  sendMessage(HANDSHAKE_GREETING, HANDSHAKE_GREETING, sizeof(HANDSHAKE_GREETING));
 }
 
 /**
@@ -76,12 +62,7 @@ void sendStatus() {
  *
  */
 void sendPosition() {
-  byte msg[27];
-  msg[0] = FLAG_START;
-  msg[1] = CMD_POSITION;
-
-
-
+  
 }
 
 void setup() {
