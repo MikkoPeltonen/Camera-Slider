@@ -11,8 +11,8 @@
  * Status commands
  */
 
-#define CMD_STATUS				0x02
-#define CMD_POSITION			0x03
+#define SEND_STATUS				0x02
+#define SEND_POSITION			0x03
 
 
 /*

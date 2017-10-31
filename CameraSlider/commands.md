@@ -5,6 +5,9 @@ General format
 2-n 	data
 n + 1	stop
 
+If a command send from the client requires a response, the response is 
+sent with the same command byte.
+
 
 
 Handshake (greeting, welcome)

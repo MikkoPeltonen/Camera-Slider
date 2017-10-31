@@ -31,7 +31,7 @@ void sendMessage(uint32_t * command, unsigned char * payload, uint32_t payloadLe
 }
 
 /**
- * Turns integers into byte arrays.
+ * Turns uint32_t integers into char arrays.
  *
  * Usage: Initialize a unsigned char array and call with a pointer to that array
  * unsigned char bytes[4];
@@ -45,6 +45,13 @@ void intToByteArray(unsigned char * bytes, uint32_t n) {
 }
 
 /**
+ * Turns four byte char array into a uint_32t integer. Char array must be in big endian format (MSB first).
+ */
+uint32_t byteArrayToInt(unsigned char * bytes) {
+    return bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3];
+}
+
+/**
  * Sends a handshake greeting message to the client
  */
 void sendHandshakeGreetingMessage() {
@@ -55,20 +62,39 @@ void sendHandshakeGreetingMessage() {
  *
  */
 void sendStatus() {
-
+  char data[20];
+  sendMessage(SEND_STATUS, data, sizeof(data));
 }
 
 /**
- *
+ * Send a position message (slide, pan, tilt, focus, zoom) via Serial.
  */
 void sendPosition() {
+  char data[20];
+
+  // Convert position integers into char arrays
+  unsigned char slide[4], pan[4], tilt[4], focus[4], zoom[4];
+  intToByteArray(slide, 52300);
+  intToByteArray(pan, 7250);
+  intToByteArray(tilt, -2000);
+  intToByteArray(focus, 0);
+  intToByteArray(zoom, 5671);
+
+  // Copy individual byte sets into data
+  memcpy(data, slide, 4);
+  memcpy(data + 4, pan, 4);
+  memcpy(data + 8, tilt, 4);
+  memcpy(data + 12, focus, 4);
+  memcpy(data + 16, zoom, 4);
   
+  sendMessage(SEND_POSITION, data, sizeof(data));
 }
 
 void setup() {
   Client->begin(115200);
   Serial.begin(9600);
 
+  // Setup motors
   panMotor.setEnablePin(PAN_ENA);
   panMotor.setPinsInverted(false, false, true);
   panMotor.setMaxSpeed(2000);
@@ -98,26 +124,37 @@ void setup() {
 
 void loop() {
   if (Client->available()) {
-    byte msg[30];
+    // Read 30 bytes into buffer
+    char msg[30];
     Client->readBytesUntil(FLAG_STOP, msg, 30);
-    byte cmd = msg[1];
+
+    // The second byte in the message is the command requested
+    char cmd = msg[1];
     
     if (connectionStatus == ConnectionStatus.DISCONNECTED) {
+      // Upon first connection, send a greeting message to verify the client
       sendHandshakeGreetingMessage();
       connectionStatus = ConnectionStatus.CONNECTING;
     } else if (connectionStatus == ConnectionStatus.CONNECTING) {
-
+      // After the greeting message was sent, a special response is expected. If received
+      // we proceed with the connection. Otherwise we refuse it.
       if (strcmp(HANDHSAKE_RESPONSE, msg) == 0) {
         connectionStatus = ConnectionStatus.CONNECTED;
       } else {
         connectionStatus = ConnectionStatus.DISCONNECTED;
       }
     } else {
+      // Connection established, ready to receive commands.
       switch (cmd) {
-        case CMD_STATUS:
+        case SEND_STATUS:
+          sendStatus();
+          break;
+        case SEND_POSITION:
+          sendPosition();
           break;
       } 
     }
   }
-}
 
+  // TODO Stepping
+}
