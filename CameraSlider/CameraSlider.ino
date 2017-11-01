@@ -15,6 +15,22 @@ AccelStepper panMotor(AccelStepper::DRIVER, PAN_PUL, PAN_DIR);
 AccelStepper tiltMotor(AccelStepper::DRIVER, TILT_PUL, TILT_DIR);
 AccelStepper slideMotor(AccelStepper::DRIVER, SLIDE_PUL, SLIDE_DIR);
 
+struct Coordinates {
+  uint32_t slide;
+  uint32_t pan;
+  uint32_t tilt;
+  uint32_t focus;
+  uint32_t zoom;
+}
+
+// Initial startup position and home are set to 0. Position is used to keep track
+// of the current position regardles of home position. Position is always relative
+// to the initial position and if home is set in the client the home position is 
+// set to the current position and only relative difference between Position and
+// Home is shown in the client.
+struct Coordinates Position = { 0, 0, 0, 0, 0 };
+struct Coordinates Home = { 0, 0, 0, 0, 0 };
+
 /**
  * Send a message via Serial.
  */
@@ -54,22 +70,30 @@ uint32_t byteArrayToInt(unsigned char * bytes) {
 /**
  * Sends a handshake greeting message to the client
  */
-void sendHandshakeGreetingMessage() {
+void sendHandshakeGreetingMessage(void) {
   sendMessage(HANDSHAKE_GREETING, HANDSHAKE_GREETING, sizeof(HANDSHAKE_GREETING));
 }
 
 /**
  *
  */
-void sendStatus() {
+void sendStatus(void) {
   char data[20];
   sendMessage(SEND_STATUS, data, sizeof(data));
+}
+
+
+/*
+ * Sets the current position as home position
+ */
+void setHome(void) {
+  Home = Position;
 }
 
 /**
  * Send a position message (slide, pan, tilt, focus, zoom) via Serial.
  */
-void sendPosition() {
+void sendPosition(void) {
   char data[20];
 
   // Convert position integers into char arrays
@@ -151,6 +175,9 @@ void loop() {
           break;
         case SEND_POSITION:
           sendPosition();
+          break;
+        case SET_HOME:
+          setHome();
           break;
       } 
     }
