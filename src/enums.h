@@ -1,18 +1,18 @@
-typedef enum {
+enum class ConnectionStatus {
   DISCONNECTED,
   CONNECTING,
   CONNECTED
-} ConnectionStatus;
+};
 
-typedef enum {
+enum class Mode {
   Timelapse,
   Video,
   Panorama
-} Mode;
+};
 
-typedef enum {
+enum class Direction {
   CW,
   CCW,
   STOP,
   STEP
-} Direction;
+};
