@@ -76,6 +76,15 @@ uint32_t byteArrayToInt(unsigned char * bytes) {
 }
 
 /**
+ * Convert the given angle (in degrees) to motor steps.
+ */
+uint32_t angleToSteps(const uint16_t angle,
+                      unsigned const uint16_t microsteps,
+                      unsigned const uint16_t stepsPerRevolution) {
+  return angle / 360.0 * stepsPerRevolution * microsteps;
+}
+
+/**
  * Sends a handshake greeting message to the client
  */
 void sendHandshakeGreetingMessage(void) {
