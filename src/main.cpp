@@ -19,9 +19,9 @@ Client * client = new Client(&Serial2);
 ConnectionStatus connectionStatus = ConnectionStatus::DISCONNECTED;
 
 // Initialize motors
-Motor * slideMotor = new Motor(SLIDE_PUL, SLIDE_DIR, 1, 200, 1);
-Motor * panMotor = new Motor(PAN_PUL, PAN_DIR, 16, 200, 13.73);
-Motor * tiltMotor = new Motor(TILT_PUL, TILT_DIR, 16, 200, 13.73);
+Motor * slideMotor = new Motor(SLIDE_PUL, SLIDE_DIR, Microstepping::MODE1, 200, 1);
+Motor * panMotor = new Motor(PAN_PUL, PAN_DIR, Microstepping::MODE16, 200, 13.73);
+Motor * tiltMotor = new Motor(TILT_PUL, TILT_DIR, Microstepping::MODE16, 200, 13.73);
 
 // Time when the last motor move command was received (when holding down a
 // button). Relative to start time, microseconds. Will overflow roughly every

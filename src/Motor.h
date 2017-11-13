@@ -1,12 +1,21 @@
 #include <AccelStepper.h>
 #include "enums.h"
 
+// Used to determine which microstepping mode the motor uses
+enum class Microstepping {
+  MODE1 = 1,
+  MODE2 = 2,
+  MODE4 = 4,
+  MODE8 = 8,
+  MODE16 = 16
+};
+
 class Motor {
   public:
     AccelStepper stepper;
 
   private:
-    int microsteps;
+    Microstepping microsteppingMode;
     int stepsPerRevolution;
     double gearRatio;
     MoveDirection moveDirection;
@@ -23,9 +32,11 @@ class Motor {
      */
     Motor(const unsigned int pulPin,
           const unsigned int dirPin,
-          const unsigned int microsteps,
+          Microstepping microsteppingMode,
           const unsigned int stepsPerRevolution,
           const double gearRatio);
+
+    void setMicrosteppingMode(Microstepping microsteppingMode);
 
     /**
      * Convert a given angle to steps.

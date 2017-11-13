@@ -4,7 +4,7 @@
 
 Motor::Motor(const unsigned int pulPin,
              const unsigned int dirPin,
-             const unsigned int microsteps,
+             Microstepping microsteppingMode,
              const unsigned int stepsPerRevolution,
              const double gearRatio) {
   this->stepper = AccelStepper(AccelStepper::DRIVER, pulPin, dirPin);
@@ -16,10 +16,18 @@ Motor::Motor(const unsigned int pulPin,
   this->stepper.enableOutputs();
   this->stepper.setCurrentPosition(0);
   this->stepper.setSpeed(800);
+
+  this->microsteppingMode = microsteppingMode;
+  this->stepsPerRevolution = stepsPerRevolution;
+  this->gearRatio = gearRatio;
+}
+
+void Motor::setMicrosteppingMode(Microstepping microsteppingMode) {
+  this->microsteppingMode = microsteppingMode;
 }
 
 int Motor::angleToSteps(const int angle) {
-  return angle / 360.0 * stepsPerRevolution * microsteps * gearRatio;
+  return angle / 360.0 * stepsPerRevolution * static_cast<int>(microsteppingMode) * gearRatio;
 }
 
 void Motor::setMoveDirection(const MoveDirection direction) {
