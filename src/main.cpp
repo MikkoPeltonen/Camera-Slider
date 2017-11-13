@@ -6,20 +6,17 @@
 #include "pinouts.h"
 #include "enums.h"
 #include "Motor.h"
+#include "Client.h"
 
 #define likely(x)   __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
-// Used to determine the Serial connection which is used to send data to the
-// client. Assigning the Serial port to a different pointer makes it easier to
-// change it later.
-HardwareSerial * Client = &Serial2;
+// Create a new Client object that is used to communicate with the client
+Client * client = new Client(&Serial2);
 
 // Connection status indicates whether the Camera Slider is connected to a
 // client, it is connecting or it is disconnected.
 ConnectionStatus connectionStatus = ConnectionStatus::DISCONNECTED;
-
-
 
 // Initialize motors
 Motor * slideMotor = new Motor(SLIDE_PUL, SLIDE_DIR, 1, 200, 1);
@@ -39,72 +36,11 @@ unsigned long motorMoveCommandReceived = 0;
 struct Coordinates Position = { 0, 0, 0, 0, 0 };
 struct Coordinates Home = { 0, 0, 0, 0, 0 };
 
-/**
- * Send a message via Serial to the client.
- */
-void sendMessage(const unsigned char command,
-                 const unsigned char * payload,
-                 const unsigned int payloadLength) {
-
-  unsigned int size = sizeof(char) * (payloadLength + 2);
-  unsigned char msg[size];
-
-  msg[0] = Constants::FLAG_START;
-  msg[1] = command;
-  memcpy(msg + 2, payload, payloadLength);
-  memcpy(msg + payloadLength + 1, "\0", 1);
-
-  Client->write(msg, sizeof(msg));
-}
-
-/**
- * Sends a handshake greeting message to the client
- */
-void sendHandshakeGreetingMessage(void) {
-  unsigned char data[20];
-  memcpy(data, Constants::HANDSHAKE_GREETING,
-         strlen(Constants::HANDSHAKE_GREETING));
-  sendMessage(Commands::SEND_HANDSHAKE_GREETING, data, sizeof(data));
-}
-
-/**
- *
- */
-void sendStatus(void) {
-  unsigned char data[20];
-  sendMessage(Commands::SEND_STATUS, data, sizeof(data));
-}
-
-
 /*
  * Sets the current position as home position
  */
 void setHome(void) {
   Home = Position;
-}
-
-/**
- * Send a position message (slide, pan, tilt, focus, zoom) via Serial.
- */
-void sendPosition(void) {
-  unsigned char data[20];
-
-  // Convert position integers into char arrays
-  unsigned char slide[4], pan[4], tilt[4], focus[4], zoom[4];
-  intToByteArray(slide, 52300);
-  intToByteArray(pan, 7250);
-  intToByteArray(tilt, -2000);
-  intToByteArray(focus, 0);
-  intToByteArray(zoom, 5671);
-
-  // Copy individual byte sets into data
-  memcpy(data, slide, 4);
-  memcpy(data + 4, pan, 4);
-  memcpy(data + 8, tilt, 4);
-  memcpy(data + 12, focus, 4);
-  memcpy(data + 16, zoom, 4);
-
-  sendMessage(Commands::SEND_POSITION, data, sizeof(data));
 }
 
 /**
@@ -133,17 +69,14 @@ void moveMotors(const char * data) {
 }
 
 void setup() {
-  Client->begin(115200);
   Serial.begin(9600);
-
-  Client->setTimeout(5);
 }
 
 void loop() {
-  if (Client->available()) {
+  if (client->serial->available()) {
     // Read 30 bytes into buffer
     char msg[30];
-    Client->readBytesUntil(Constants::FLAG_STOP, msg, 30);
+    client->serial->readBytesUntil(Constants::FLAG_STOP, msg, 30);
     Serial.write(msg);
 
     // The second byte in the message is the command requested
@@ -155,7 +88,7 @@ void loop() {
 
     if (unlikely(connectionStatus == ConnectionStatus::DISCONNECTED)) {
       // Upon first connection, send a greeting message to verify the client
-      sendHandshakeGreetingMessage();
+      client->sendHandshakeGreetingMessage();
       connectionStatus = ConnectionStatus::CONNECTING;
     } else if (unlikely(connectionStatus == ConnectionStatus::CONNECTING)) {
       // After the greeting message was sent, a special response is expected.
@@ -169,10 +102,10 @@ void loop() {
       // Connection established, ready to receive commands.
       switch (cmd) {
         case Commands::SEND_STATUS:
-          sendStatus();
+          client->sendStatus();
           break;
         case Commands::SEND_POSITION:
-          sendPosition();
+          client->sendPosition();
           break;
         case Commands::SET_HOME:
           setHome();
