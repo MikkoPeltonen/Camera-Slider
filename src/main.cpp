@@ -1,9 +1,14 @@
 #include <Arduino.h>
 #include <AccelStepper.h>
 #include <HardwareSerial.h>
+#include "Helpers.h"
 #include "Constants.h"
 #include "pinouts.h"
 #include "enums.h"
+#include "Motor.h"
+
+#define likely(x)   __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
 
 // Used to determine the Serial connection which is used to send data to the
 // client. Assigning the Serial port to a different pointer makes it easier to
@@ -14,18 +19,17 @@ HardwareSerial * Client = &Serial2;
 // client, it is connecting or it is disconnected.
 ConnectionStatus connectionStatus = ConnectionStatus::DISCONNECTED;
 
-// Initialize motors
-AccelStepper panMotor(AccelStepper::DRIVER, PAN_PUL, PAN_DIR);
-AccelStepper tiltMotor(AccelStepper::DRIVER, TILT_PUL, TILT_DIR);
-AccelStepper slideMotor(AccelStepper::DRIVER, SLIDE_PUL, SLIDE_DIR);
 
-struct Coordinates {
-  uint32_t slide;
-  uint32_t pan;
-  uint32_t tilt;
-  uint32_t focus;
-  uint32_t zoom;
-};
+
+// Initialize motors
+Motor * slideMotor = new Motor(SLIDE_PUL, SLIDE_DIR, 1, 200, 1);
+Motor * panMotor = new Motor(PAN_PUL, PAN_DIR, 16, 200, 13.73);
+Motor * tiltMotor = new Motor(TILT_PUL, TILT_DIR, 16, 200, 13.73);
+
+// Time when the last motor move command was received (when holding down a
+// button). Relative to start time, microseconds. Will overflow roughly every
+// 70 minutes.
+unsigned long motorMoveCommandReceived = 0;
 
 // Initial startup position and home are set to 0. Position is used to keep
 // track of the current position regardles of home position. Position is always
@@ -40,9 +44,9 @@ struct Coordinates Home = { 0, 0, 0, 0, 0 };
  */
 void sendMessage(const unsigned char command,
                  const unsigned char * payload,
-                 const uint32_t payloadLength) {
+                 const unsigned int payloadLength) {
 
-  uint32_t size = sizeof(char) * (payloadLength + 2);
+  unsigned int size = sizeof(char) * (payloadLength + 2);
   unsigned char msg[size];
 
   msg[0] = Constants::FLAG_START;
@@ -51,37 +55,6 @@ void sendMessage(const unsigned char command,
   memcpy(msg + payloadLength + 1, "\0", 1);
 
   Client->write(msg, sizeof(msg));
-}
-
-/**
- * Turns uint32_t integers into char arrays.
- *
- * Usage: Initialize a unsigned char array and call with a pointer to that array
- * unsigned char bytes[4];
- * intToByteArray(bytes, number);
- */
-void intToByteArray(unsigned char * bytes, uint32_t n) {
-    bytes[0] = (n >> 24) & 0xFF;
-    bytes[1] = (n >> 16) & 0xFF;
-    bytes[2] = (n >> 8) & 0xFF;
-    bytes[3] = n & 0xFF;
-}
-
-/**
- * Turns four byte char array into a uint_32t integer. Char array must be in big
- * endian format (MSB first).
- */
-uint32_t byteArrayToInt(unsigned char * bytes) {
-    return bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3];
-}
-
-/**
- * Convert the given angle (in degrees) to motor steps.
- */
-uint32_t angleToSteps(const uint16_t angle,
-                      unsigned const uint16_t microsteps,
-                      unsigned const uint16_t stepsPerRevolution) {
-  return angle / 360.0 * stepsPerRevolution * microsteps;
 }
 
 /**
@@ -134,34 +107,34 @@ void sendPosition(void) {
   sendMessage(Commands::SEND_POSITION, data, sizeof(data));
 }
 
+/**
+ *
+ *
+ * @param data Data part of received serial buffer
+ */
+void moveMotors(const char * data) {
+  unsigned short moveInstructions = data[0] << 8 | data[1];
+  motorMoveCommandReceived = micros();
+
+  slideMotor->setMoveDirection(getMoveDirection(
+    moveInstructions & MotorMoveBitmask::SLIDE_ENABLE,
+    moveInstructions & MotorMoveBitmask::SLIDE_DIRECTION
+  ));
+
+  panMotor->setMoveDirection(getMoveDirection(
+    moveInstructions & MotorMoveBitmask::PAN_ENABLE,
+    moveInstructions & MotorMoveBitmask::PAN_DIRECTION
+  ));
+
+  tiltMotor->setMoveDirection(getMoveDirection(
+    moveInstructions & MotorMoveBitmask::TILT_ENABLE,
+    moveInstructions & MotorMoveBitmask::TILT_DIRECTION
+  ));
+}
+
 void setup() {
   Client->begin(115200);
   Serial.begin(9600);
-
-  // Setup motors
-  panMotor.setEnablePin(PAN_ENA);
-  panMotor.setPinsInverted(false, false, true);
-  panMotor.setMaxSpeed(2000);
-  panMotor.setAcceleration(100000);
-  panMotor.enableOutputs();
-  panMotor.setCurrentPosition(0);
-  panMotor.setSpeed(800);
-
-  tiltMotor.setEnablePin(TILT_ENA);
-  tiltMotor.setPinsInverted(false, false, true);
-  tiltMotor.setMaxSpeed(2000);
-  tiltMotor.setAcceleration(100000);
-  tiltMotor.enableOutputs();
-  tiltMotor.setCurrentPosition(0);
-  tiltMotor.setSpeed(800);
-
-  slideMotor.setEnablePin(SLIDE_ENA);
-  slideMotor.setPinsInverted(false, false, true);
-  slideMotor.setMaxSpeed(2000);
-  slideMotor.setAcceleration(100000);
-  slideMotor.enableOutputs();
-  slideMotor.setCurrentPosition(0);
-  slideMotor.setSpeed(800);
 
   Client->setTimeout(5);
 }
@@ -176,11 +149,15 @@ void loop() {
     // The second byte in the message is the command requested
     char cmd = msg[1];
 
-    if (connectionStatus == ConnectionStatus::DISCONNECTED) {
+    // Get only the data bytes
+    char data[27];
+    memcpy(&data, &msg + 2, sizeof(msg) - 3);
+
+    if (unlikely(connectionStatus == ConnectionStatus::DISCONNECTED)) {
       // Upon first connection, send a greeting message to verify the client
       sendHandshakeGreetingMessage();
       connectionStatus = ConnectionStatus::CONNECTING;
-    } else if (connectionStatus == ConnectionStatus::CONNECTING) {
+    } else if (unlikely(connectionStatus == ConnectionStatus::CONNECTING)) {
       // After the greeting message was sent, a special response is expected.
       // If received we proceed with the connection. Otherwise we refuse it.
       if (strcmp(Constants::HANDSHAKE_RESPONSE, msg) == 0) {
@@ -200,9 +177,22 @@ void loop() {
         case Commands::SET_HOME:
           setHome();
           break;
+        case Commands::MOVE_MOTORS:
+          moveMotors(data);
+          break;
       }
     }
   }
 
-  // TODO Stepping
+  // If new motor move command isn't received within the threshold time,
+  // stop moving.
+  if (micros() - motorMoveCommandReceived >= Constants::HOLD_MOVE_DELAY) {
+    const char zeros[2] = { 0, 0 };
+    moveMotors(zeros);
+  }
+
+  // Do stepping
+  slideMotor->stepper.run();
+  panMotor->stepper.run();
+  tiltMotor->stepper.run();
 }

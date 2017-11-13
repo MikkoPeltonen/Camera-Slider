@@ -5,6 +5,7 @@ namespace Commands {
   static const unsigned char SEND_STATUS =               0x02;
   static const unsigned char SEND_POSITION =	           0x03;
   static const unsigned char SET_HOME =                  0x04;
+  static const unsigned char MOVE_MOTORS =               0x05;
 }
 
 namespace Constants {
@@ -12,4 +13,5 @@ namespace Constants {
    static const unsigned char FLAG_STOP =                0x00;
    static const char * HANDSHAKE_GREETING =              "r6lrj37e2nkaavgz";
    static const char * HANDSHAKE_RESPONSE =              "77fpm1lyw612jhlr";
+   static const unsigned int HOLD_MOVE_DELAY =           25;
 }

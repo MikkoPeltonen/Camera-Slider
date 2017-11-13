@@ -55,3 +55,21 @@ Move
 2   stepper         8 bit unsigned int
 3   angle           32 bit signed long
 4   stop
+
+
+Move (continuous, button down)
+-----------------------------------------------------------
+0   start
+1   move_hold
+2   bit   data value
+    0     slide direction
+    1     slide on/off
+    2     pan direction
+    3     pan on/off
+    4     tilt direction
+    5     tilt on/off
+3   0     focus direction
+    1     focus on/off
+    2     zoom direction
+    3     zoom on/off
+4    stop
