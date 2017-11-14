@@ -11,11 +11,3 @@ void intToByteArray(unsigned char * bytes, uint32_t n) {
 uint32_t byteArrayToInt(unsigned char * bytes) {
     return bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3];
 }
-
-MoveDirection getMoveDirection(const int enabled, const int directionBit) {
-  if (!enabled) {
-    return MoveDirection::None;
-  }
-
-  return directionBit ? MoveDirection::CW : MoveDirection::CCW;
-}

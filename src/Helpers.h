@@ -21,11 +21,3 @@ void intToByteArray(unsigned char * bytes, uint32_t n);
  * @return       [description]
  */
 uint32_t byteArrayToInt(unsigned char * bytes);
-
-/**
- * [getMoveDirection description]
- * @param  enabled      [description]
- * @param  directionBit [description]
- * @return              [description]
- */
-MoveDirection getMoveDirection(const int enabled, const int directionBit);

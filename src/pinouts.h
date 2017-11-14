@@ -17,3 +17,6 @@ const int FOCUS_PUL = 42;
 const int ZOOM_ENA	= 43;
 const int ZOOM_DIR	= 44;
 const int ZOOM_PUL	= 45;
+
+const int SLIDE_LIMIT_SWITCH_1 = 46;
+const int SLIDE_LIMIT_SWITCH_2 = 47;

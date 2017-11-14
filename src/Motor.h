@@ -34,7 +34,6 @@ class Motor {
     Microstepping microsteppingMode;
     int stepsPerRevolution;
     double gearRatio;
-    MoveDirection moveDirection;
 
     // Microstepping mode selection pins for Big Easy Driver
     int ms1;

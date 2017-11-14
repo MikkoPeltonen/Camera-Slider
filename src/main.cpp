@@ -19,9 +19,17 @@ Client * client = new Client(&Serial2);
 ConnectionStatus connectionStatus = ConnectionStatus::DISCONNECTED;
 
 // Initialize motors
-Motor * slideMotor = new Motor(SLIDE_PUL, SLIDE_DIR, SLIDE_ENA, Microstepping::MODE1, 200, 1);
-Motor * panMotor = new Motor(PAN_PUL, PAN_DIR, PAN_ENA, Microstepping::MODE16, 200, Constants::NEMA11_GEAR_RATIO);
-Motor * tiltMotor = new Motor(TILT_PUL, TILT_DIR, TILT_ENA, Microstepping::MODE16, 200, Constants::NEMA11_GEAR_RATIO);
+Motor * slideMotor = new Motor(SLIDE_PUL, SLIDE_DIR, SLIDE_ENA,
+                               Microstepping::MODE1, 200,
+                               Constants::SLIDER_GEAR_RATIO);
+
+Motor * panMotor =   new Motor(PAN_PUL, PAN_DIR, PAN_ENA,
+                               Microstepping::MODE16, 200,
+                               Constants::NEMA11_GEAR_RATIO);
+
+Motor * tiltMotor =  new Motor(TILT_PUL, TILT_DIR, TILT_ENA,
+                               Microstepping::MODE16, 200,
+                               Constants::NEMA11_GEAR_RATIO);
 
 // Time when the last motor move command was received (when holding down a
 // button). Relative to start time, microseconds. Will overflow roughly every
@@ -55,22 +63,40 @@ void moveMotors(const char * data) {
 
   slideMotor->move(
     (moveInstructions & MotorMoveBitmask::SLIDE_ENABLE) *
-    (moveInstructions & MotorMoveBitmask::SLIDE_DIRECTION ? 1 : -1) * Constants::HOLD_MOVE_ANGLE
+    (moveInstructions & MotorMoveBitmask::SLIDE_DIRECTION ? 1 : -1) *
+    Constants::HOLD_MOVE_ANGLE
   );
 
   panMotor->move(
     (moveInstructions & MotorMoveBitmask::PAN_ENABLE) *
-    (moveInstructions & MotorMoveBitmask::PAN_DIRECTION ? 1 : -1) * Constants::HOLD_MOVE_ANGLE
+    (moveInstructions & MotorMoveBitmask::PAN_DIRECTION ? 1 : -1) *
+    Constants::HOLD_MOVE_ANGLE
   );
 
   tiltMotor->move(
     (moveInstructions & MotorMoveBitmask::TILT_ENABLE) *
-    (moveInstructions & MotorMoveBitmask::TILT_DIRECTION ? 1 : -1) * Constants::HOLD_MOVE_ANGLE
+    (moveInstructions & MotorMoveBitmask::TILT_DIRECTION ? 1 : -1) *
+    Constants::HOLD_MOVE_ANGLE
   );
 }
 
-void setup() {
+/**
+ * Interrupt callback, called when either of the slider limit switches is
+ * activated.
+ */
+void slideLimitSwitchActivated(void) {
+  slideMotor->stepper.stop();
+}
 
+void setup() {
+  // Attach slider limit switches
+  pinMode(SLIDE_LIMIT_SWITCH_1, INPUT);
+  pinMode(SLIDE_LIMIT_SWITCH_2, INPUT);
+
+  attachInterrupt(digitalPinToInterrupt(SLIDE_LIMIT_SWITCH_1),
+                  slideLimitSwitchActivated, RISING);
+  attachInterrupt(digitalPinToInterrupt(SLIDE_LIMIT_SWITCH_2),
+                  slideLimitSwitchActivated, RISING);
 }
 
 void loop() {

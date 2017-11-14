@@ -16,4 +16,5 @@ namespace Constants {
    static const unsigned int HOLD_MOVE_DELAY =           25;
    static const double HOLD_MOVE_ANGLE =                 0.1;
    static double NEMA11_GEAR_RATIO =                     13 + 212 / 289;
+   static double SLIDER_GEAR_RATIO =                     1;
 }
