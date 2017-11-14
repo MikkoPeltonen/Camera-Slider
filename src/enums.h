@@ -9,12 +9,6 @@ enum class ConnectionStatus {
   CONNECTED
 };
 
-enum class MoveDirection {
-  CW = 1,
-  None = 0,
-  CCW = -1
-};
-
 struct LineData {
   uint32_t startTime;
   uint32_t duration;

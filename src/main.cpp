@@ -19,9 +19,9 @@ Client * client = new Client(&Serial2);
 ConnectionStatus connectionStatus = ConnectionStatus::DISCONNECTED;
 
 // Initialize motors
-Motor * slideMotor = new Motor(SLIDE_PUL, SLIDE_DIR, Microstepping::MODE1, 200, 1);
-Motor * panMotor = new Motor(PAN_PUL, PAN_DIR, Microstepping::MODE16, 200, 13.73);
-Motor * tiltMotor = new Motor(TILT_PUL, TILT_DIR, Microstepping::MODE16, 200, 13.73);
+Motor * slideMotor = new Motor(SLIDE_PUL, SLIDE_DIR, SLIDE_ENA, Microstepping::MODE1, 200, 1);
+Motor * panMotor = new Motor(PAN_PUL, PAN_DIR, PAN_ENA, Microstepping::MODE16, 200, Constants::NEMA11_GEAR_RATIO);
+Motor * tiltMotor = new Motor(TILT_PUL, TILT_DIR, TILT_ENA, Microstepping::MODE16, 200, Constants::NEMA11_GEAR_RATIO);
 
 // Time when the last motor move command was received (when holding down a
 // button). Relative to start time, microseconds. Will overflow roughly every
@@ -44,7 +44,8 @@ void setHome(void) {
 }
 
 /**
- *
+ * Callback for serial messages telling the motors to turn when a button is
+ * held down in the client software. Used in motor manual control.
  *
  * @param data Data part of received serial buffer
  */
@@ -52,24 +53,24 @@ void moveMotors(const char * data) {
   unsigned short moveInstructions = data[0] << 8 | data[1];
   motorMoveCommandReceived = micros();
 
-  slideMotor->setMoveDirection(getMoveDirection(
-    moveInstructions & MotorMoveBitmask::SLIDE_ENABLE,
-    moveInstructions & MotorMoveBitmask::SLIDE_DIRECTION
-  ));
+  slideMotor->move(
+    (moveInstructions & MotorMoveBitmask::SLIDE_ENABLE) *
+    (moveInstructions & MotorMoveBitmask::SLIDE_DIRECTION ? 1 : -1) * Constants::HOLD_MOVE_ANGLE
+  );
 
-  panMotor->setMoveDirection(getMoveDirection(
-    moveInstructions & MotorMoveBitmask::PAN_ENABLE,
-    moveInstructions & MotorMoveBitmask::PAN_DIRECTION
-  ));
+  panMotor->move(
+    (moveInstructions & MotorMoveBitmask::PAN_ENABLE) *
+    (moveInstructions & MotorMoveBitmask::PAN_DIRECTION ? 1 : -1) * Constants::HOLD_MOVE_ANGLE
+  );
 
-  tiltMotor->setMoveDirection(getMoveDirection(
-    moveInstructions & MotorMoveBitmask::TILT_ENABLE,
-    moveInstructions & MotorMoveBitmask::TILT_DIRECTION
-  ));
+  tiltMotor->move(
+    (moveInstructions & MotorMoveBitmask::TILT_ENABLE) *
+    (moveInstructions & MotorMoveBitmask::TILT_DIRECTION ? 1 : -1) * Constants::HOLD_MOVE_ANGLE
+  );
 }
 
 void setup() {
-  Serial.begin(9600);
+
 }
 
 void loop() {
@@ -77,7 +78,6 @@ void loop() {
     // Read 30 bytes into buffer
     char msg[30];
     client->serial->readBytesUntil(Constants::FLAG_STOP, msg, 30);
-    Serial.write(msg);
 
     // The second byte in the message is the command requested
     char cmd = msg[1];
