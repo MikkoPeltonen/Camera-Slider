@@ -11,6 +11,9 @@
 #define likely(x)   __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
+// Boolean used to determine whether live action is ongoing, e.g. timelapse.
+bool isRunning = false;
+
 // Create a new Client object that is used to communicate with the client
 Client * client = new Client(&Serial2);
 
@@ -88,6 +91,23 @@ void slideLimitSwitchActivated(void) {
   slideMotor->stepper.stop();
 }
 
+/**
+ * Save received instructions to a file.
+ *
+ * @param data [description]
+ */
+void saveInstructions(const char * data) {
+  // TODO Save data to EEPROM
+}
+
+/**
+ * Start action. After action is started, only a stop command can be received
+ * along with status commands.
+ */
+void startAction(void) {
+  // TODO
+}
+
 void setup() {
   // Attach slider limit switches
   pinMode(SLIDE_LIMIT_SWITCH_1, INPUT);
@@ -101,15 +121,15 @@ void setup() {
 
 void loop() {
   if (client->serial->available()) {
-    // Read 30 bytes into buffer
-    char msg[30];
-    client->serial->readBytesUntil(Constants::FLAG_STOP, msg, 30);
+    // Read 64 bytes into buffer
+    char msg[64];
+    client->serial->readBytesUntil(Constants::FLAG_STOP, msg, 64);
 
     // The second byte in the message is the command requested
     char cmd = msg[1];
 
     // Get only the data bytes
-    char data[27];
+    char data[61];
     memcpy(&data, &msg + 2, sizeof(msg) - 3);
 
     if (unlikely(connectionStatus == ConnectionStatus::DISCONNECTED)) {
@@ -138,6 +158,11 @@ void loop() {
           break;
         case Commands::MOVE_MOTORS:
           moveMotors(data);
+          break;
+        case Commands::SAVE_INSTRUCTIONS:
+          saveInstructions(data);
+          break;
+        case Commands::START_ACTION:
           break;
       }
     }
