@@ -2,6 +2,14 @@
 #include "Motor.h"
 #include "enums.h"
 
+unsigned int microstepTruthTable[5][3] = {
+  { 0, 0, 0 },
+  { 1, 0, 0 },
+  { 0, 1, 0 },
+  { 1, 1, 0 },
+  { 1, 1, 1 }
+};
+
 Motor::Motor(const unsigned int pulPin,
              const unsigned int dirPin,
              const unsigned int enablePin,

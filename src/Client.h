@@ -2,14 +2,14 @@
 
 class Client {
   public:
-    HardwareSerial * serial;
+    Stream & serial;
 
     /**
      * Constructor
      *
      * @param serial Serial port to use to communicate with the client
      */
-    Client(HardwareSerial * serial);
+    Client(Stream & serial);
 
     /**
      * [sendStatus description]

@@ -9,13 +9,10 @@
 //  1     1     0    8
 //  1     1     1    16
 
-unsigned int microstepTruthTable[5][3] = {
-  { 0, 0, 0 },
-  { 1, 0, 0 },
-  { 0, 1, 0 },
-  { 1, 1, 0 },
-  { 1, 1, 1 }
-};
+#ifndef truthTable
+#define truthTable
+extern int microsteppingTruthTable[5][3];
+#endif
 
 // Used to determine which microstepping mode the motor uses.
 enum class Microstepping {

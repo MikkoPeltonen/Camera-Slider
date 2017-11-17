@@ -4,10 +4,10 @@
 #include "Helpers.h"
 #include "Constants.h"
 
-Client::Client(HardwareSerial * serial) {
-  this->serial = serial;
-  this->serial->begin(115200);
-  this->serial->setTimeout(5);
+Client::Client(Stream & s) : serial(s) {
+  //this->serial = serial;
+  //this->serial->begin(115200);
+  //this->serial->setTimeout(5);
 }
 
 void Client::sendMessage(const unsigned char command,
@@ -22,7 +22,7 @@ void Client::sendMessage(const unsigned char command,
   memcpy(msg + 2, payload, payloadLength);
   memcpy(msg + payloadLength + 1, "\0", 1);
 
-  serial->write(msg, sizeof(msg));
+  serial.write(msg, sizeof(msg));
 }
 
 void Client::sendHandshakeGreetingMessage(void) {

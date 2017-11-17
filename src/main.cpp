@@ -15,7 +15,7 @@
 bool isRunning = false;
 
 // Create a new Client object that is used to communicate with the client
-Client * client = new Client(&Serial2);
+Client client(Serial2);
 
 // Connection status indicates whether the Camera Slider is connected to a
 // client, it is connecting or it is disconnected.
@@ -27,11 +27,11 @@ Motor * slideMotor = new Motor(SLIDE_PUL, SLIDE_DIR, SLIDE_ENA,
                                Constants::SLIDER_GEAR_RATIO);
 
 Motor * panMotor =   new Motor(PAN_PUL, PAN_DIR, PAN_ENA,
-                               Microstepping::MODE16, 200,
+                               Microstepping::MODE8, 200,
                                Constants::NEMA11_GEAR_RATIO);
 
 Motor * tiltMotor =  new Motor(TILT_PUL, TILT_DIR, TILT_ENA,
-                               Microstepping::MODE16, 200,
+                               Microstepping::MODE8, 200,
                                Constants::NEMA11_GEAR_RATIO);
 
 // Time when the last motor move command was received (when holding down a
@@ -117,13 +117,17 @@ void setup() {
                   slideLimitSwitchActivated, RISING);
   attachInterrupt(digitalPinToInterrupt(SLIDE_LIMIT_SWITCH_2),
                   slideLimitSwitchActivated, RISING);
+
+  Serial.begin(9600);
+  Serial2.begin(115200);
 }
 
 void loop() {
-  if (client->serial->available()) {
+  if (client.serial.available()) {
     // Read 64 bytes into buffer
     char msg[64];
-    client->serial->readBytesUntil(Constants::FLAG_STOP, msg, 64);
+    client.serial.readBytesUntil(Constants::FLAG_STOP, msg, 64);
+    Serial.write(msg);
 
     // The second byte in the message is the command requested
     char cmd = msg[1];
@@ -133,25 +137,23 @@ void loop() {
     memcpy(&data, &msg + 2, sizeof(msg) - 3);
 
     if (unlikely(connectionStatus == ConnectionStatus::DISCONNECTED)) {
-      // Upon first connection, send a greeting message to verify the client
-      client->sendHandshakeGreetingMessage();
-      connectionStatus = ConnectionStatus::CONNECTING;
-    } else if (unlikely(connectionStatus == ConnectionStatus::CONNECTING)) {
-      // After the greeting message was sent, a special response is expected.
-      // If received we proceed with the connection. Otherwise we refuse it.
-      if (strcmp(Constants::HANDSHAKE_RESPONSE, msg) == 0) {
+      if (memcmp(Constants::HANDSHAKE_RESPONSE, data,
+                 sizeof(Constants::HANDSHAKE_RESPONSE))) {
+        client.sendHandshakeGreetingMessage();
         connectionStatus = ConnectionStatus::CONNECTED;
       } else {
         connectionStatus = ConnectionStatus::DISCONNECTED;
       }
+    } else if (unlikely(connectionStatus == ConnectionStatus::CONNECTING)) {
+
     } else {
       // Connection established, ready to receive commands.
       switch (cmd) {
         case Commands::SEND_STATUS:
-          client->sendStatus();
+          client.sendStatus();
           break;
         case Commands::SEND_POSITION:
-          client->sendPosition();
+          client.sendPosition();
           break;
         case Commands::SET_HOME:
           setHome();
