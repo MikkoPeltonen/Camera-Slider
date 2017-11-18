@@ -20,13 +20,13 @@ void Client::sendMessage(const unsigned char command,
   msg[0] = Constants::FLAG_START;
   msg[1] = command;
   memcpy(msg + 2, payload, payloadLength);
-  memcpy(msg + payloadLength + 1, "\0", 1);
+  memcpy(msg + payloadLength + 1, &Constants::FLAG_STOP, 1);
 
   serial.write(msg, sizeof(msg));
 }
 
 void Client::sendHandshakeGreetingMessage(void) {
-  unsigned char data[20];
+  unsigned char data[17];
   memcpy(data, Constants::HANDSHAKE_GREETING,
          strlen(Constants::HANDSHAKE_GREETING));
   sendMessage(Commands::SEND_HANDSHAKE_GREETING, data, sizeof(data));

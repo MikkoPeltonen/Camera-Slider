@@ -3,12 +3,6 @@
 #ifndef ENUMS
 #define ENUMS
 
-enum class ConnectionStatus {
-  DISCONNECTED,
-  CONNECTING,
-  CONNECTED
-};
-
 struct LineData {
   uint32_t startTime;
   uint32_t duration;

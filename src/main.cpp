@@ -8,9 +8,6 @@
 #include "Motor.h"
 #include "Client.h"
 
-#define likely(x)   __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
-
 // Boolean used to determine whether live action is ongoing, e.g. timelapse.
 bool isRunning = false;
 
@@ -18,8 +15,8 @@ bool isRunning = false;
 Client client(Serial2);
 
 // Connection status indicates whether the Camera Slider is connected to a
-// client, it is connecting or it is disconnected.
-ConnectionStatus connectionStatus = ConnectionStatus::DISCONNECTED;
+// client or is it
+bool isConnected = false;
 
 // Initialize motors
 Motor * slideMotor = new Motor(SLIDE_PUL, SLIDE_DIR, SLIDE_ENA,
@@ -38,6 +35,11 @@ Motor * tiltMotor =  new Motor(TILT_PUL, TILT_DIR, TILT_ENA,
 // button). Relative to start time, microseconds. Will overflow roughly every
 // 70 minutes.
 unsigned long motorMoveCommandReceived = 0;
+
+// Time when a connection verification message was last received. If a
+// verification message is not received at least every VERIFICATION_INTERVAL
+// milliseconds, the connection is terminated.
+unsigned long connectionVerificationTime = 0;
 
 // Initial startup position and home are set to 0. Position is used to keep
 // track of the current position regardles of home position. Position is always
@@ -136,16 +138,10 @@ void loop() {
     char data[61];
     memcpy(&data, &msg + 2, sizeof(msg) - 3);
 
-    if (unlikely(connectionStatus == ConnectionStatus::DISCONNECTED)) {
-      if (memcmp(Constants::HANDSHAKE_RESPONSE, data,
-                 sizeof(Constants::HANDSHAKE_RESPONSE))) {
-        client.sendHandshakeGreetingMessage();
-        connectionStatus = ConnectionStatus::CONNECTED;
-      } else {
-        connectionStatus = ConnectionStatus::DISCONNECTED;
-      }
-    } else if (unlikely(connectionStatus == ConnectionStatus::CONNECTING)) {
-
+    if (!isConnected && memcmp(Constants::HANDSHAKE_RESPONSE, data,
+                               strlen(Constants::HANDSHAKE_RESPONSE))) {
+      client.sendHandshakeGreetingMessage();
+      isConnected = true;
     } else {
       // Connection established, ready to receive commands.
       switch (cmd) {
@@ -176,6 +172,11 @@ void loop() {
     const char zeros[2] = { 0, 0 };
     moveMotors(zeros);
   }
+
+  // See connectionVerificationTime docblock
+  //if (micros() - connectionVerificationTime >= Constants::VERIFICATION_INTERVAL) {
+  //  isConnected = false;
+  //}
 
   // Do stepping
   slideMotor->stepper.run();
