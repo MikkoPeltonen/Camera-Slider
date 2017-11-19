@@ -27,16 +27,16 @@ struct Coordinates {
 // circumvents this problem.
 struct MotorMoveBitmask {
   enum value {
-    SLIDE_DIRECTION = 1 << 0,
-    SLIDE_ENABLE = 1 << 1,
-    PAN_DIRECTION = 1 << 2,
-    PAN_ENABLE = 1 << 3,
-    TILT_DIRECTION = 1 << 4,
-    TILT_ENABLE = 1 << 5,
+    SLIDE_DIRECTION = 1 << 16,
+    SLIDE_ENABLE = 1 << 15,
+    PAN_DIRECTION = 1 << 14,
+    PAN_ENABLE = 1 << 13,
+    TILT_DIRECTION = 1 << 12,
+    TILT_ENABLE = 1 << 11,
     FOCUS_DIRECTION = 1 << 8,
-    FOCUS_ENABLE = 1 << 9,
-    ZOOM_DIRECTION = 1 << 10,
-    ZOOM_ENABLE = 1 << 11
+    FOCUS_ENABLE = 1 << 7,
+    ZOOM_DIRECTION = 1 << 6,
+    ZOOM_ENABLE = 1 << 5
   };
 };
 

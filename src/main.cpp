@@ -19,17 +19,14 @@ Client client(Serial2);
 bool isConnected = false;
 
 // Initialize motors
-Motor * slideMotor = new Motor(SLIDE_PUL, SLIDE_DIR, SLIDE_ENA,
-                               Microstepping::MODE1, 200,
-                               Constants::SLIDER_GEAR_RATIO);
+Motor slideMotor(SLIDE_PUL, SLIDE_DIR, SLIDE_ENA, Microstepping::MODE1, 200,
+                 Constants::SLIDER_GEAR_RATIO);
 
-Motor * panMotor =   new Motor(PAN_PUL, PAN_DIR, PAN_ENA,
-                               Microstepping::MODE8, 200,
-                               Constants::NEMA11_GEAR_RATIO);
+Motor panMotor(PAN_PUL, PAN_DIR, PAN_ENA, Microstepping::MODE8, 200,
+               Constants::NEMA11_GEAR_RATIO);
 
-Motor * tiltMotor =  new Motor(TILT_PUL, TILT_DIR, TILT_ENA,
-                               Microstepping::MODE8, 200,
-                               Constants::NEMA11_GEAR_RATIO);
+Motor tiltMotor(TILT_PUL, TILT_DIR, TILT_ENA, Microstepping::MODE8, 200,
+                Constants::NEMA11_GEAR_RATIO);
 
 // Time when the last motor move command was received (when holding down a
 // button). Relative to start time, microseconds. Will overflow roughly every
@@ -40,6 +37,8 @@ unsigned long motorMoveCommandReceived = 0;
 // verification message is not received at least every VERIFICATION_INTERVAL
 // milliseconds, the connection is terminated.
 unsigned long connectionVerificationTime = 0;
+
+bool motorsMovingManually = false;
 
 // Initial startup position and home are set to 0. Position is used to keep
 // track of the current position regardles of home position. Position is always
@@ -62,27 +61,13 @@ void setHome(void) {
  *
  * @param data Data part of received serial buffer
  */
-void moveMotors(const char * data) {
-  unsigned short moveInstructions = data[0] << 8 | data[1];
+void moveMotors(const char b1, const char b2) {
+  unsigned short moveInstructions = b1 << 8 | b2;
   motorMoveCommandReceived = micros();
+  motorsMovingManually = true;
 
-  slideMotor->move(
-    (moveInstructions & MotorMoveBitmask::SLIDE_ENABLE) *
-    (moveInstructions & MotorMoveBitmask::SLIDE_DIRECTION ? 1 : -1) *
-    Constants::HOLD_MOVE_ANGLE
-  );
-
-  panMotor->move(
-    (moveInstructions & MotorMoveBitmask::PAN_ENABLE) *
-    (moveInstructions & MotorMoveBitmask::PAN_DIRECTION ? 1 : -1) *
-    Constants::HOLD_MOVE_ANGLE
-  );
-
-  tiltMotor->move(
-    (moveInstructions & MotorMoveBitmask::TILT_ENABLE) *
-    (moveInstructions & MotorMoveBitmask::TILT_DIRECTION ? 1 : -1) *
-    Constants::HOLD_MOVE_ANGLE
-  );
+  panMotor.move(((b1 & (1 << 4)) ? 1 : 0) * ((b1 & (1 << 5)) ? 1 : -1));
+  tiltMotor.move(((b1 & (1 << 2)) ? 1 : 0) * ((b1 & (1 << 3)) ? 1 : -1));
 }
 
 /**
@@ -90,7 +75,7 @@ void moveMotors(const char * data) {
  * activated.
  */
 void slideLimitSwitchActivated(void) {
-  slideMotor->stepper.stop();
+  slideMotor.stepper->stop();
 }
 
 /**
@@ -129,7 +114,6 @@ void loop() {
     // Read 64 bytes into buffer
     char msg[64];
     client.serial.readBytesUntil(Constants::FLAG_STOP, msg, 64);
-    Serial.write(msg);
 
     // The second byte in the message is the command requested
     char cmd = msg[1];
@@ -159,7 +143,7 @@ void loop() {
           setHome();
           break;
         case Commands::MOVE_MOTORS:
-          moveMotors(data);
+          moveMotors(msg[2], msg[3]);
           break;
         case Commands::SAVE_INSTRUCTIONS:
           saveInstructions(data);
@@ -172,10 +156,11 @@ void loop() {
 
   // If new motor move command isn't received within the threshold time,
   // stop moving.
-  if (micros() - motorMoveCommandReceived >= Constants::HOLD_MOVE_DELAY) {
+  /*if (motorsMovingManually && micros() - motorMoveCommandReceived >= Constants::HOLD_MOVE_DELAY) {
     const char zeros[2] = { 0, 0 };
     moveMotors(zeros);
-  }
+    motorsMovingManually = false;
+  }*/
 
   // See connectionVerificationTime docblock
   if (isConnected && millis() - connectionVerificationTime >= Constants::VERIFICATION_INTERVAL) {
@@ -183,7 +168,7 @@ void loop() {
   }
 
   // Do stepping
-  slideMotor->stepper.run();
-  panMotor->stepper.run();
-  tiltMotor->stepper.run();
+  slideMotor.stepper->run();
+  panMotor.stepper->run();
+  tiltMotor.stepper->run();
 }

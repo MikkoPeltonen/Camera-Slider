@@ -25,7 +25,7 @@ enum class Microstepping {
 
 class Motor {
   public:
-    AccelStepper stepper;
+    AccelStepper * stepper;
 
   private:
     Microstepping microsteppingMode;
