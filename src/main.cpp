@@ -142,9 +142,13 @@ void loop() {
                                strlen(Constants::HANDSHAKE_RESPONSE))) {
       client.sendHandshakeGreetingMessage();
       isConnected = true;
+      connectionVerificationTime = millis();
     } else {
       // Connection established, ready to receive commands.
       switch (cmd) {
+        case Commands::SEND_VERIFICATION:
+          connectionVerificationTime = millis();
+          break;
         case Commands::SEND_STATUS:
           client.sendStatus();
           break;
@@ -174,9 +178,9 @@ void loop() {
   }
 
   // See connectionVerificationTime docblock
-  //if (micros() - connectionVerificationTime >= Constants::VERIFICATION_INTERVAL) {
-  //  isConnected = false;
-  //}
+  if (isConnected && millis() - connectionVerificationTime >= Constants::VERIFICATION_INTERVAL) {
+    isConnected = false;
+  }
 
   // Do stepping
   slideMotor->stepper.run();

@@ -8,6 +8,7 @@ namespace Commands {
   static const unsigned char MOVE_MOTORS =               0x05;
   static const unsigned char SAVE_INSTRUCTIONS =         0x06;
   static const unsigned char START_ACTION =              0x07;
+  static const unsigned char SEND_VERIFICATION =         0x09;
 }
 
 namespace Constants {
@@ -20,5 +21,5 @@ namespace Constants {
    static double NEMA11_GEAR_RATIO =                     13 + 212 / 289;
    static double SLIDER_GEAR_RATIO =                     1;
    static const unsigned int EEPROM_ADDRESS =            0x40;
-   static const unsigned int VERIFICATION_INTERVAL =     5000;
+   static const unsigned int VERIFICATION_INTERVAL =     6000;
 }
