@@ -23,10 +23,10 @@ Motor slideMotor(SLIDE_PUL, SLIDE_DIR, SLIDE_ENA, Microstepping::MODE1, 200,
                  Constants::SLIDER_GEAR_RATIO);
 
 Motor panMotor(PAN_PUL, PAN_DIR, PAN_ENA, Microstepping::MODE8, 200,
-               Constants::NEMA11_GEAR_RATIO);
+               Constants::PAN_GEAR_RATIO);
 
 Motor tiltMotor(TILT_PUL, TILT_DIR, TILT_ENA, Microstepping::MODE8, 200,
-                Constants::NEMA11_GEAR_RATIO);
+                Constants::TILT_GEAR_RATIO);
 
 // Time when the last motor move command was received (when holding down a
 // button). Relative to start time, microseconds. Will overflow roughly every
@@ -45,14 +45,24 @@ bool motorsMovingManually = false;
 // relative to the initial position and if home is set in the client the home
 // position is set to the current position and only relative difference between
 // Position and Home is shown in the client.
-struct Coordinates Position = { 0, 0, 0, 0, 0 };
-struct Coordinates Home = { 0, 0, 0, 0, 0 };
+struct Coordinates home = { 0, 0, 0, 0, 0 };
 
 /*
  * Sets the current position as home position
  */
 void setHome(void) {
-  Home = Position;
+  home.slide = slideMotor.stepper->currentPosition();
+  home.pan = panMotor.stepper->currentPosition();
+  home.tilt = tiltMotor.stepper->currentPosition();
+}
+
+/**
+ * Move the motors to the set home positon.
+ */
+void goHome(void) {
+  slideMotor.stepper->moveTo(home.slide);
+  panMotor.stepper->moveTo(home.pan);
+  tiltMotor.stepper->moveTo(home.tilt);
 }
 
 /**
@@ -62,10 +72,10 @@ void setHome(void) {
  * @param data Data part of received serial buffer
  */
 void moveMotors(const char b1, const char b2) {
-  unsigned short moveInstructions = b1 << 8 | b2;
   motorMoveCommandReceived = micros();
   motorsMovingManually = true;
 
+  slideMotor.move(((b1 & (1 << 7)) ? 1 : 0) * ((b1 & (1 << 8)) ? 1 : -1));
   panMotor.move(((b1 & (1 << 4)) ? 1 : 0) * ((b1 & (1 << 5)) ? 1 : -1));
   tiltMotor.move(((b1 & (1 << 2)) ? 1 : 0) * ((b1 & (1 << 3)) ? 1 : -1));
 }
@@ -122,8 +132,8 @@ void loop() {
     char data[61];
     memcpy(&data, &msg + 2, sizeof(msg) - 3);
 
-    if (!isConnected && memcmp(Constants::HANDSHAKE_RESPONSE, data,
-                               strlen(Constants::HANDSHAKE_RESPONSE))) {
+    if (!isConnected && memcmp(Constants::CLIENT_GREETING, data,
+                               strlen(Constants::CLIENT_GREETING))) {
       client.sendHandshakeGreetingMessage();
       isConnected = true;
       connectionVerificationTime = millis();
@@ -141,6 +151,9 @@ void loop() {
           break;
         case Commands::SET_HOME:
           setHome();
+          break;
+        case Commands::GO_HOME:
+          goHome();
           break;
         case Commands::MOVE_MOTORS:
           moveMotors(msg[2], msg[3]);

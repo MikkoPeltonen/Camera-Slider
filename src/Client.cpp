@@ -27,8 +27,8 @@ void Client::sendMessage(const unsigned char command,
 
 void Client::sendHandshakeGreetingMessage(void) {
   unsigned char data[17];
-  memcpy(data, Constants::HANDSHAKE_GREETING,
-         strlen(Constants::HANDSHAKE_GREETING));
+  memcpy(data, Constants::WELCOME_MESSAGE,
+         strlen(Constants::WELCOME_MESSAGE));
   sendMessage(Commands::SEND_HANDSHAKE_GREETING, data, sizeof(data));
 }
 
