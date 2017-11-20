@@ -18,6 +18,11 @@ Client client(Serial2);
 // client or is it
 bool isConnected = false;
 
+// When setHome() is called, isHoming is set to true. When the motors have
+// reached their home positions, isHoming is reset to false and the client
+// is notified about the finished homing process.
+bool isHoming = false;
+
 // Initialize motors
 Motor slideMotor(SLIDE_PUL, SLIDE_DIR, SLIDE_ENA, Microstepping::MODE1, 200,
                  Constants::SLIDER_GEAR_RATIO);
@@ -60,6 +65,8 @@ void setHome(void) {
  * Move the motors to the set home positon.
  */
 void goHome(void) {
+  isHoming = true;
+
   slideMotor.stepper->moveTo(home.slide);
   panMotor.stepper->moveTo(home.pan);
   tiltMotor.stepper->moveTo(home.tilt);
@@ -178,6 +185,16 @@ void loop() {
   // See connectionVerificationTime docblock
   if (isConnected && millis() - connectionVerificationTime >= Constants::VERIFICATION_INTERVAL) {
     isConnected = false;
+  }
+
+  // If a homing command was received and the motors have stopped moving, the
+  // homing process has completed. Notify the client.
+  // TODO Handle other axis, too
+  if (isHoming &&
+      !panMotor.stepper->isRunning() &&
+      !tiltMotor.stepper->isRunning()) {
+    client.notifyHomingDone();
+    isHoming = false;
   }
 
   // Do stepping

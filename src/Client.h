@@ -26,6 +26,12 @@ class Client {
      */
     void sendHandshakeGreetingMessage(void);
 
+    /**
+     * Sends a message to the client to notify it about the homing process
+     * having succeeded.
+     */
+    void notifyHomingDone(void);
+
   private:
     /**
      * Send a message via Serial to the client.

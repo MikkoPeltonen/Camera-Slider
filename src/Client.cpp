@@ -4,11 +4,7 @@
 #include "Helpers.h"
 #include "Constants.h"
 
-Client::Client(Stream & s) : serial(s) {
-  //this->serial = serial;
-  //this->serial->begin(115200);
-  //this->serial->setTimeout(5);
-}
+Client::Client(Stream & s) : serial(s) {}
 
 void Client::sendMessage(const unsigned char command,
                          const unsigned char * payload,
@@ -19,6 +15,8 @@ void Client::sendMessage(const unsigned char command,
 
   msg[0] = Constants::FLAG_START;
   msg[1] = command;
+
+  // TODO Allow messages without payload
   memcpy(msg + 2, payload, payloadLength);
   memcpy(msg + payloadLength + 1, &Constants::FLAG_STOP, 1);
 
@@ -56,4 +54,9 @@ void Client::sendPosition(void) {
   memcpy(data + 16, zoom, 4);
 
   sendMessage(Commands::SEND_POSITION, data, sizeof(data));
+}
+
+void Client::notifyHomingDone(void) {
+  unsigned char dumbData[1] = { 0x22 };
+  sendMessage(Commands::HOMING_DONE, dumbData, sizeof(dumbData));
 }

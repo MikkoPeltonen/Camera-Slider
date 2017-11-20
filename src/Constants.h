@@ -14,6 +14,7 @@ namespace Commands {
    */
   static const unsigned char SEND_STATUS =               20;
   static const unsigned char SEND_POSITION =	           21;
+  static const unsigned char HOMING_DONE =               22;
 
 
   /**
