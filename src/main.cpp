@@ -23,6 +23,11 @@ bool isConnected = false;
 // is notified about the finished homing process.
 bool isHoming = false;
 
+// When set to true, the Camera Slider informs the client that it has
+// successfully received and verified the settings and move instructions sent,
+// and that it has saved the instructions.
+bool hasFinishedReceivingData = false;
+
 // Initialize motors
 Motor slideMotor(SLIDE_PUL, SLIDE_DIR, SLIDE_ENA, Microstepping::MODE1, 200,
                  Constants::SLIDER_GEAR_RATIO);
@@ -98,10 +103,29 @@ void slideLimitSwitchActivated(void) {
 /**
  * Save received instructions to a file.
  *
- * @param data [description]
+ * @param data
  */
 void saveInstructions(const char * data) {
-  // TODO Save data to EEPROM
+  // TODO
+}
+
+/**
+ * Save received settings.
+ *
+ * @param data
+ */
+void saveSettings(const char * data) {
+  // TODO
+}
+
+/**
+ * Check that the calculated checksum of the received data matches the one sent.
+ *
+ * @param data
+ */
+void verifyChecksum(const char * data) {
+  // TODO
+  client.notifyDataDownloadFinished();
 }
 
 /**
@@ -165,9 +189,20 @@ void loop() {
         case Commands::MOVE_MOTORS:
           moveMotors(msg[2], msg[3]);
           break;
+
+        // Motorized movement data receiving
+        case Commands::BEGIN_DATA_DOWNLOAD:
+            break;
+        case Commands::SAVE_SETTINGS:
+          saveSettings(data);
+          break;
         case Commands::SAVE_INSTRUCTIONS:
           saveInstructions(data);
           break;
+        case Commands::SEND_DATA_CHECKSUM:
+          verifyChecksum(data);
+          break;
+
         case Commands::START_ACTION:
           break;
       }
@@ -195,6 +230,12 @@ void loop() {
       !tiltMotor.stepper->isRunning()) {
     client.notifyHomingDone();
     isHoming = false;
+  }
+
+  // Notify the client about successfully received data
+  if (hasFinishedReceivingData) {
+    hasFinishedReceivingData = false;
+    client.notifyDataDownloadFinished();
   }
 
   // Do stepping

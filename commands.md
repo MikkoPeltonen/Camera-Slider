@@ -73,3 +73,10 @@ Move (continuous, button down)
     2     zoom direction
     3     zoom on/off
 4    stop
+
+
+BEGIN_DATA_DOWNLOAD
+-----------------------------------------------------------
+0   start
+1   BEGIN_DATA_DOWNLOAD
+2-5 count                      number of instructions to receive

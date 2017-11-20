@@ -16,6 +16,14 @@ namespace Commands {
   static const unsigned char SEND_POSITION =	           21;
   static const unsigned char HOMING_DONE =               22;
 
+  // Sent when all the settings and instructions data has been received from
+  // the client.
+  static const unsigned char DATA_RECEIVED =             23;
+
+  // Sent when some of the instruction data was not received, or the checksums
+  // didn't match.
+  static const unsigned char DATA_MISMATCH =             24;
+
 
   /**
    * Action instructions
@@ -23,7 +31,18 @@ namespace Commands {
   static const unsigned char SET_HOME =                  30;
   static const unsigned char GO_HOME =                   31;
   static const unsigned char MOVE_MOTORS =               32;
+
+  // These commands are used to receive different types of downloadable data
+  // from the client. SAVE_INSTRUCTIONS tells the Camera Slider to save motor
+  // movement instructions, SAVE_SETTINGS to save settings data regarding the
+  // motor instructions. BEGIN_DATA_DOWNLOAD indicates that settings and motor
+  // data is coming next. SEND_DATA_CHECKSUM is used to send a checksum to
+  // verify the received data.
   static const unsigned char SAVE_INSTRUCTIONS =         33;
+  static const unsigned char SAVE_SETTINGS =             34;
+  static const unsigned char BEGIN_DATA_DOWNLOAD =       35;
+  static const unsigned char SEND_DATA_CHECKSUM =        36;
+
   static const unsigned char START_ACTION =              40;
 
 }

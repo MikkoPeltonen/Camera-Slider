@@ -32,6 +32,12 @@ class Client {
      */
     void notifyHomingDone(void);
 
+    /**
+     * Sends a message to the client to notify it about the data download
+     * process succeeding.
+     */
+    void notifyDataDownloadFinished(void);
+
   private:
     /**
      * Send a message via Serial to the client.

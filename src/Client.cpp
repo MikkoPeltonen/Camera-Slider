@@ -60,3 +60,8 @@ void Client::notifyHomingDone(void) {
   unsigned char dumbData[1] = { 0x22 };
   sendMessage(Commands::HOMING_DONE, dumbData, sizeof(dumbData));
 }
+
+void Client::notifyDataDownloadFinished(void) {
+  unsigned char dumbData[1] = { 0x22 };
+  sendMessage(Commands::DATA_RECEIVED, dumbData, sizeof(dumbData));
+}
